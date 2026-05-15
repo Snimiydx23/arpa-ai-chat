@@ -1,17 +1,43 @@
-import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
 
-const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+const genAI = new GoogleGenerativeAI(
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY!
+);
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { messages, model = "gemini-2.0-flash" } = await req.json();
+    const { message } = await req.json();
 
-    if (!GEMINI_API_KEY) {
+    if (!message) {
       return NextResponse.json(
-        { error: "GOOGLE_GENERATIVE_AI_API_KEY missing" },
-        { status: 500 }
+        { error: "Message required" },
+        { status: 400 }
       );
     }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+    });
+
+    const result = await model.generateContent(message);
+
+    const response = result.response.text();
+
+    return NextResponse.json({
+      response,
+    });
+  } catch (error: any) {
+    console.error("API ERROR:", error);
+
+    return NextResponse.json(
+      {
+        error: error.message || "Something went wrong",
+      },
+      { status: 500 }
+    );
+  }
+}
 
     // Convert messages to Gemini format
     const contents = messages.map((m: { role: string; content: string }) => ({
